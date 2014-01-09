@@ -28,18 +28,6 @@ class Jetpack_Sync {
 	/**
 	 * @param string $file __FILE__
 	 * @param array settings:
-	 * 	post_types => array( post_type slugs   ): The post types to sync.  Default: post, page
-	 *	post_stati => array( post_status slugs ): The post stati to sync.  Default: publish
-	 */
-	static function sync_posts( $file, array $settings = null ) {
-		$jetpack = Jetpack::init();
-		$args = func_get_args();
-		return call_user_func_array( array( $jetpack->sync, 'posts' ), $args );
-	}
-
-	/**
-	 * @param string $file __FILE__
-	 * @param array settings:
 	 * 	post_types    => array( post_type slugs      ): The post types to sync.     Default: post, page
 	 *	post_stati    => array( post_status slugs    ): The post stati to sync.     Default: publish
 	 *	comment_types => array( comment_type slugs   ): The comment types to sync.  Default: '', comment, trackback, pingback
@@ -295,18 +283,27 @@ class Jetpack_Sync {
 
 /* Posts Sync */
 
-	function posts( $file, array $settings = null ) {
-		$module_slug = Jetpack::get_module_slug( $file );
+	/**
+	 * Post sync is now a core Jetpack function, statically set to always
+	 * trigger on both public & private post types for both public & private
+	 * post stati. NOTE: Content from private posts will be redacted.
+	 */
+	function posts() {
+		if ( empty( $this->sync_conditions['posts'] ) ) {
+			$this->sync_conditions['posts'] = array(
+				'core' => array(
+					'post_types' => array_values(
+						get_post_types( array( 'public' => true, 'private' => true ),  'names', 'or' )
+					),
+					'post_stati' => array_values(
+						get_post_stati( array( 'public' => true, 'private' => true ) , 'names', 'or' )
+					),
+				),
+			);
 
-		$defaults = array(
-			'post_types' => array( 'post', 'page' ),
-			'post_stati' => array( 'publish' ),
-		);
-
-		$this->sync_conditions['posts'][$module_slug] = wp_parse_args( $settings, $defaults );
-
-		add_action( 'transition_post_status', array( $this, 'transition_post_status_action' ), 10, 3 );
-		add_action( 'delete_post', array( $this, 'delete_post_action' ) );
+			add_action( 'transition_post_status', array( $this, 'transition_post_status_action' ), 10, 3 );
+			add_action( 'delete_post', array( $this, 'delete_post_action' ) );
+		}
 	}
 
 	function delete_post_action( $post_id ) {

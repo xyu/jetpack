@@ -9,7 +9,6 @@
  * Module Tags: Writing
  */
 
-Jetpack_Sync::sync_posts( __FILE__ );
 Jetpack_Sync::sync_comments( __FILE__ );
 
 function jetpack_enhanced_distribution_activate() {
